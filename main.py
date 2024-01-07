@@ -4,42 +4,50 @@ from lm import send_prompt, prompt_and_load_code
 
 PROMPT_MASK_LIST_ENTITIES = 'Given the env vars HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN a user wants to ' \
                             '{command}. ' \
-                            'Write Python function "list_entities()" that returns a list of all entity objects ' \
+                            'Write Python function "list_entities()" that returns a list ' \
                             'that can perform this action. ' \
+                            'The list should contain only the original objects returned from the API.' \
                             'Consider only by entity prefix, entity_id and friendly name, but return the entire object. ' \
-                            'Don''t use supported_features. ' \
+                            'Don''t use "supported_features" attribute. ' \
                             'Not all entities has friendly_name. ' \
                             'Import and use os, requests and other necessary packages. ' \
                             'Do not call the function.'
 PROMPT_MASK_SELECT_ENTITIES = 'A user asked to {command}. ' \
                               'Which of the following entities is or are the best to perform this request?\n' \
                               '{entities}\n\n' \
-                              'Provide the shortest answer possible.'
+                              'Provide only the entity name. If more than one entity, then commas instead of "and".'
 PROMPT_DO_THE_COMMAND = 'Given the env vars HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN a user wants to {command}. ' \
-                        'Write Python function "call_entity()" to do that to the entity_id {entity_id} and ' \
-                        'return string result. ' \
+                        'Write Python function "call_entity()" to do that specifically and only to the following entity_id: ' \
+                        '"{entity_id}" and return string result. ' \
                         'Import all necessary packages. ' \
                         'Do not call the function.'
 
 DISTANCE_THRESHOLD = 3
 
 
-def filter_entities(entities_list, best_entity_answer):
-    return [e for e in entities_list if
-            distance(e['attributes']['friendly_name'], best_entity_answer) < DISTANCE_THRESHOLD]
+def filter_entities(entities_list, best_entity_answers):
+    return [e for e in entities_list for ans in best_entity_answers if
+            distance(e['attributes']['friendly_name'], ans) < DISTANCE_THRESHOLD]
 
 
 def main(command):
+    # List Home-Assistant entities
     module_list_entities = prompt_and_load_code(PROMPT_MASK_LIST_ENTITIES.format(command=command))
     entities_list = module_list_entities.list_entities()
+    assert len(entities_list) > 0
     entities_names = [e['attributes']['friendly_name'] for e in entities_list]
 
-    best_entity_answer = send_prompt(
-        PROMPT_MASK_SELECT_ENTITIES.format(command=command, entities=entities_names))
+    # Filter entities
+    best_entity_answers = send_prompt(
+        PROMPT_MASK_SELECT_ENTITIES.format(command=command, entities=entities_names)).split(', ')
+    assert len(best_entity_answers) > 0
 
-    best_entities = filter_entities(entities_list, best_entity_answer)
+    # Call action on entities
+    best_entities = filter_entities(entities_list, best_entity_answers)
+    assert len(best_entities) > 0
     best_entities_ids = [e['entity_id'] for e in best_entities]
-    module_call_entity = prompt_and_load_code(PROMPT_DO_THE_COMMAND.format(command=command, entity_id=','.join(best_entities_ids)))
+    module_call_entity = prompt_and_load_code(
+        PROMPT_DO_THE_COMMAND.format(command=command, entity_id=','.join(best_entities_ids)))
 
     print(module_call_entity.call_entity())
 
