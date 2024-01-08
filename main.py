@@ -4,14 +4,16 @@ from lm import send_prompt, prompt_and_load_code
 
 PROMPT_MASK_LIST_ENTITIES = 'Given the env vars HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN a user wants to ' \
                             '{command}. ' \
-                            'Write Python function "list_entities()" that returns a list ' \
+                            'Write Python function "list_entities()" that returns a list of entities ' \
                             'that can perform this action. ' \
-                            'The list should contain only the original objects returned from the API.' \
-                            'Consider only by entity prefix, entity_id and friendly name, but return the entire object. ' \
+                            'The list should contain only the original objects returned from the API. ' \
+                            'Consider mainly entity_id, friendly name and state not "attributes", ' \
+                            'but return the entire object. ' \
                             'Don''t use "supported_features" attribute. ' \
                             'Not all entities has friendly_name. ' \
                             'Import and use os, requests and other necessary packages. ' \
-                            'Do not call the function.'
+                            'Don''t include any explanations in your response.' \
+                            'You can make more than one API call if you need to retrieve more data.'
 PROMPT_MASK_SELECT_ENTITIES = 'A user asked to {command}. ' \
                               'Which of the following entities is or are the best to perform this request?\n' \
                               '{entities}\n\n' \
@@ -19,8 +21,8 @@ PROMPT_MASK_SELECT_ENTITIES = 'A user asked to {command}. ' \
 PROMPT_DO_THE_COMMAND = 'Given the env vars HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN a user wants to {command}. ' \
                         'Write Python function "call_entity()" to do that specifically and only to the following entity_id: ' \
                         '"{entity_id}" and return string result. ' \
-                        'Import all necessary packages. ' \
-                        'Do not call the function.'
+                        'Import and use os, requests and other necessary packages. ' \
+                        'Don''t include any explanations in your response.'
 
 DISTANCE_THRESHOLD = 3
 
@@ -53,4 +55,6 @@ def main(command):
 
 
 if __name__ == '__main__':
-    main('Lock the door')
+    command = 'Lock the door'
+    print(f'>> {command}')
+    main(command)
