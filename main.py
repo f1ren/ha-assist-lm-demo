@@ -24,7 +24,7 @@ PROMPT_DO_THE_COMMAND = 'Given the env vars HOME_ASSISTANT_URL and HOME_ASSISTAN
                         'Import and use os, requests and other necessary packages. ' \
                         'Don''t include any explanations in your response.'
 
-DISTANCE_THRESHOLD = 3
+DISTANCE_THRESHOLD = 2
 
 
 def filter_entities(entities_list, best_entity_answers):
@@ -34,17 +34,22 @@ def filter_entities(entities_list, best_entity_answers):
 
 def main(command):
     # List Home-Assistant entities
+    print('🤖 ChatGPT code to list HA entities...')
     module_list_entities = prompt_and_load_code(PROMPT_MASK_LIST_ENTITIES.format(command=command))
     entities_list = module_list_entities.list_entities()
     assert len(entities_list) > 0
     entities_names = [e['attributes']['friendly_name'] for e in entities_list]
+    print('Applicable entities: ' + ', '.join(entities_names))
 
     # Filter entities
+    print('🤖 ChatGPT to filter entities...')
     best_entity_answers = send_prompt(
         PROMPT_MASK_SELECT_ENTITIES.format(command=command, entities=entities_names)).split(', ')
     assert len(best_entity_answers) > 0
+    print('Filtered entities: ' + ', '.join(best_entity_answers))
 
     # Call action on entities
+    print('🤖 ChatGPT code to act on the entities...')
     best_entities = filter_entities(entities_list, best_entity_answers)
     assert len(best_entities) > 0
     best_entities_ids = [e['entity_id'] for e in best_entities]
